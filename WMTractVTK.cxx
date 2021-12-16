@@ -46,6 +46,7 @@
 #include "vtkStreamTracer.h"
 #include "itkImageToVTKImageFilter.h"
 #include "vtkLineSource.h"
+#include "vtkCellArray.h"
 
 ///nfs/masi/kanakap/open_srx
 
@@ -64,7 +65,7 @@ int main(int argc, char* argv[])
     }
 
     // Make data type and image type for the input diffusion image
-    typedef itk::Image<double,3> DiffusionImageType;
+    typedef itk::Image < double,3 > DiffusionImageType;
     
     typedef itk::Image < double, 3 > AtlasImageType ;
 
@@ -174,8 +175,25 @@ int main(int argc, char* argv[])
   vtkSmartPointer < vtkRenderer > renderer = vtkSmartPointer < vtkRenderer >::New() ;
   renderer->AddActor ( imageActor ) ;
   
-  
-  
+/*
+ * vtkPoints x
+ *
+ * x->insertNextPoint(double x[3])
+ *
+ * vtkPointsSet y
+ *
+ * y->setPoints(x)
+ *
+ * vtkActor actors
+ *
+ */ 
+ 
+     vtkPoints* newp= vtkPoints::New();
+     vtkCellArray* newv= vtkCellArray::New();
+     vtkPolyData* pd= vtkPolyData::New();
+     pd->SetPoints( newp );
+     pd->SetVerts( newv );
+ 
     //AtlasImageType::RegionType wholeImage;
     AtlasImageType::RegionType region = DiffusionImage->GetLargestPossibleRegion();
     AtlasImageType::SizeType size = region.GetSize();
@@ -186,14 +204,21 @@ int main(int argc, char* argv[])
      // AtlasIterator.GetIndex() ; 
      //double a = AtlasImage->GetPixel() ; 
      
-     if (AtlasImage->GetPixel(AtlasIterator.GetIndex()) == 20.0)
+     if (AtlasImage->GetPixel(AtlasIterator.GetIndex()) == 3.0)
      {
+        vtkIdType id= newp->InsertNextPoint(AtlasIterator.GetIndex()[0], AtlasIterator.GetIndex()[1], AtlasIterator.GetIndex()[2]);
+        newv->InsertNextCell( 1, &id );
         std::cout << "current index " << AtlasIterator.GetIndex() << std::endl ;
      	std::cout << "current pixel " << AtlasImage->GetPixel(AtlasIterator.GetIndex()) << std::endl ;
         
      }
      ++AtlasIterator ; 
     }
+
+   vtkPolyDataMapper* my_mapper= vtkPolyDataMapper::New();
+   vtkActor* my_actor= vtkActor::New();
+   my_mapper->SetInputData( pd );
+   my_actor->SetMapper( my_mapper );
 
     /*AtlasImageType::IndexType corner;
     corner[0] = 0;
@@ -271,7 +296,7 @@ int main(int argc, char* argv[])
     vtkSmartPointer<vtkSphereSource> sphereSource =
     vtkSmartPointer<vtkSphereSource>::New();
   sphereSource->SetCenter(55, 229, 11);
-  sphereSource->SetRadius(4.0);
+  sphereSource->SetRadius(10.0);
 
 
   vtkSmartPointer<vtkPolyDataMapper> sphereMapper = vtkSmartPointer<vtkPolyDataMapper>::New();
@@ -279,6 +304,7 @@ int main(int argc, char* argv[])
 
   vtkSmartPointer<vtkActor> sphereActor = vtkSmartPointer<vtkActor>::New();
   sphereActor->SetMapper(sphereMapper);
+  sphereActor->GetProperty()->SetOpacity(0);
 
 	renderer->AddActor(sphereActor);
 
@@ -334,14 +360,15 @@ int main(int argc, char* argv[])
   //  interactor->DestroyTimer ( timerId ) ;
   // run!
   // Create the widget
+  renderer->AddActor(my_actor);
   vtkSmartPointer<vtkBalloonRepresentation> balloonRep = vtkSmartPointer <vtkBalloonRepresentation>::New();
   balloonRep->SetBalloonLayoutToImageRight();
 
   vtkSmartPointer<vtkBalloonWidget> balloonWidget = vtkSmartPointer<vtkBalloonWidget>::New();
   balloonWidget->SetInteractor(interactor);
   balloonWidget->SetRepresentation(balloonRep);
-  balloonWidget->AddBalloon(sphereActor,
-                            "This is a sphere",NULL);
+  balloonWidget->AddBalloon(my_actor,
+                            "This is a intensity 20",NULL);
   balloonWidget->EnabledOn(); // must come before interactor->start and interactor->render
   interactor->Start() ;
 	interactor->Render();
